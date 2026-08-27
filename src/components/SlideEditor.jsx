@@ -1,0 +1,541 @@
+import { useState, useRef, useEffect } from 'react';
+import { ReactSortable } from 'react-sortablejs';
+import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical } from 'lucide-react';
+import { generatePresentation } from '../services/aiService';
+
+const DEFAULT_COLUMNS = [
+  { id: 'intro', title: 'Introdução & Atenção' },
+  { id: 'historia', title: 'História & Conexão' },
+  { id: 'conteudo', title: 'Método & Conteúdo' },
+  { id: 'pitch', title: 'Oferta & Pitch' }
+];
+
+function RichTextEditor({ initialContent, onChange }) {
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current && initialContent !== undefined && editorRef.current.innerHTML === '') {
+      editorRef.current.innerHTML = initialContent;
+    }
+  }, []); 
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'b': e.preventDefault(); document.execCommand('bold'); break;
+        case 'i': e.preventDefault(); document.execCommand('italic'); break;
+        case 'u': e.preventDefault(); document.execCommand('underline'); break;
+        case 's': e.preventDefault(); document.execCommand('strikeThrough'); break; 
+        case '1': e.preventDefault(); document.execCommand('formatBlock', false, 'H2'); break; 
+        case '2': e.preventDefault(); document.execCommand('formatBlock', false, 'H3'); break; 
+        case '0': e.preventDefault(); document.execCommand('formatBlock', false, 'P'); break; 
+        default: break;
+      }
+    }
+  };
+
+  return (
+    <div
+      ref={editorRef}
+      contentEditable
+      onBlur={handleInput}
+      onKeyDown={handleKeyDown}
+      className="w-full min-h-[140px] focus:outline-none p-4 text-sm text-black leading-relaxed empty:before:content-['Digite_o_conteúdo_do_slide...'] empty:before:text-apple-gray empty:before:pointer-events-none overflow-y-auto cursor-text"
+      style={{ wordBreak: 'break-word' }}
+    />
+  );
+}
+
+export default function SlideEditor({ project, updateProject, onBack }) {
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const columns = project.columns || DEFAULT_COLUMNS;
+  const slides = project.slides || [];
+
+  const [localColumns, setLocalColumns] = useState(() => {
+    const state = {};
+    columns.forEach(c => {
+      state[c.id] = slides.filter(s => s.columnId === c.id);
+    });
+    return state;
+  });
+
+  useEffect(() => {
+    const flatSlides = [];
+    columns.forEach(c => {
+      if (localColumns[c.id]) {
+        flatSlides.push(...localColumns[c.id].map(s => ({ ...s, columnId: c.id })));
+      }
+    });
+
+    const currentProjectStr = JSON.stringify(slides);
+    const newProjectStr = JSON.stringify(flatSlides);
+
+    if (currentProjectStr !== newProjectStr) {
+      updateProject({
+        ...project,
+        slides: flatSlides,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  }, [localColumns, project, columns, updateProject, slides]);
+
+  const handleGenerate = async () => {
+    const apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) {
+      setError('Chave da API do Gemini não configurada.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const generatedSlides = await generatePresentation(project, apiKey);
+      const newState = {};
+      columns.forEach(c => {
+        newState[c.id] = generatedSlides.filter(s => s.columnId === c.id);
+      });
+      setLocalColumns(newState);
+      updateProject({
+        ...project,
+        slides: generatedSlides,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      setError(err.message || 'Falha ao gerar os slides.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSlideContent = (id, newContent, colId) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [colId]: prev[colId].map(s => s.id === id ? { ...s, content: newContent } : s)
+    }));
+  };
+
+  const updateSlideImage = (id, newImageUrl, colId) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [colId]: prev[colId].map(s => s.id === id ? { ...s, imageUrl: newImageUrl } : s)
+    }));
+  };
+
+  const updateSlideTitle = (id, newTitle, colId) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [colId]: prev[colId].map(s => s.id === id ? { ...s, title: newTitle } : s)
+    }));
+  };
+
+  const addBlankSlide = (columnId) => {
+    const newSlide = {
+      id: `slide_${Date.now()}`,
+      columnId,
+      type: 'Novo Slide',
+      title: '',
+      content: ''
+    };
+    setLocalColumns(prev => ({
+      ...prev,
+      [columnId]: [...(prev[columnId] || []), newSlide]
+    }));
+  };
+
+  const deleteSlide = (id, colId) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [colId]: prev[colId].filter(s => s.id !== id)
+    }));
+  };
+
+  const insertSlideAfter = (id, colId) => {
+    const newSlide = {
+      id: `slide_${Date.now()}`,
+      columnId: colId,
+      type: 'Novo Slide',
+      title: '',
+      content: ''
+    };
+    setLocalColumns(prev => {
+      const colSlides = [...(prev[colId] || [])];
+      const index = colSlides.findIndex(s => s.id === id);
+      colSlides.splice(index + 1, 0, newSlide);
+      return {
+        ...prev,
+        [colId]: colSlides
+      };
+    });
+  };
+
+  // GERENCIAMENTO DE BLOCOS
+  const addBlock = () => {
+    const newColId = `col_${Date.now()}`;
+    const newCol = { id: newColId, title: 'Novo Bloco' };
+    
+    setLocalColumns(prev => ({ ...prev, [newColId]: [] }));
+    
+    updateProject({
+      ...project,
+      columns: [...columns, newCol],
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const deleteBlock = (colId) => {
+    if (!window.confirm("Tem certeza que deseja excluir este bloco inteiro e todos os seus slides?")) return;
+    
+    const newColumns = columns.filter(c => c.id !== colId);
+    const newSlides = slides.filter(s => s.columnId !== colId);
+    
+    const newLocal = { ...localColumns };
+    delete newLocal[colId];
+    setLocalColumns(newLocal);
+
+    updateProject({
+      ...project,
+      columns: newColumns,
+      slides: newSlides,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const updateBlockTitle = (colId, newTitle) => {
+    const newColumns = columns.map(c => c.id === colId ? { ...c, title: newTitle } : c);
+    updateProject({
+      ...project,
+      columns: newColumns,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const flatSlidesList = [];
+  columns.forEach(c => {
+    if (localColumns[c.id]) {
+      flatSlidesList.push(...localColumns[c.id]);
+    }
+  });
+
+  const copyAll = () => {
+    const text = columns.map(col => {
+      const colSlides = localColumns[col.id] || [];
+      if (colSlides.length === 0) return '';
+      
+      const cleanHtml = (html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return doc.body.textContent || "";
+      };
+
+      const slidesText = colSlides.map(s => {
+        const globalIndex = flatSlidesList.findIndex(fs => fs.id === s.id) + 1;
+        const isAiTitle = s.type && s.type !== 'Novo Slide' && s.type !== 'Slide';
+        const titleStr = isAiTitle ? ` • ${s.type}` : '';
+        
+        return `[Slide ${globalIndex}${titleStr}]\n${cleanHtml(s.content)}`;
+      }).join('\n\n---\n\n');
+
+      return `### ${col.title.toUpperCase()}\n\n${slidesText}`;
+    }).filter(Boolean).join('\n\n\n');
+
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (slides.length === 0 && !project.isFreeMode) {
+    return (
+      <div className="max-w-3xl mx-auto pb-12">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm font-medium text-apple-gray hover:text-black mb-8">
+          <ArrowLeft size={16} /> Voltar
+        </button>
+        <div className="bg-white p-12 rounded-3xl shadow-sm border border-black/5 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-black/5 rounded-2xl flex items-center justify-center mb-6">
+            <Sparkles className="text-apple-gray" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold mb-4">Gerar o Storyboard Kanban</h2>
+          <p className="text-apple-gray max-w-md mx-auto mb-8 leading-relaxed">
+            A IA analisará sua Mesa de Estratégia e criará o roteiro exato, slide por slide, agrupado nos blocos do seu pitch.
+          </p>
+          {error && <div className="w-full p-4 mb-6 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100 text-left">{error}</div>}
+          <button 
+            onClick={handleGenerate} disabled={loading}
+            className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-xl font-medium hover:bg-black/80 transition-all disabled:opacity-70 shadow-lg shadow-black/20"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
+            {loading ? 'Escrevendo os Slides...' : 'Gerar Roteiro Completo'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6 shrink-0">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="flex items-center gap-2 text-sm font-medium text-apple-gray hover:text-black">
+            <ArrowLeft size={16} /> {project.isFreeMode ? 'Dashboard' : 'Estratégia'}
+          </button>
+          <div className="border-l border-black/10 pl-4">
+            <h2 className="text-xl font-bold">{project.name}</h2>
+            {project.isFreeMode && <span className="text-[10px] uppercase font-bold text-apple-gray">Modo Livre</span>}
+          </div>
+        </div>
+        
+        <div className="flex gap-4 items-center">
+          <div className="hidden md:flex gap-2 text-xs text-apple-gray bg-black/5 px-3 py-1.5 rounded-lg items-center">
+            <Type size={12} />
+            <span className="font-semibold">Atalhos:</span>
+            <span>Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+S.</span>
+            <span className="ml-2 font-semibold">Tamanhos:</span>
+            <span>Ctrl+1, Ctrl+2, Ctrl+0.</span>
+          </div>
+        </div>
+      </div>
+
+      {/* HORIZONTAL STORYBOARD (ROWS) */}
+      <div className="flex-1 flex flex-col gap-8 pb-12 w-full">
+        {columns.map((col, blockIndex) => {
+          const columnSlides = localColumns[col.id] || [];
+          return (
+            <div key={col.id} className="w-full bg-black/5 rounded-3xl p-6 flex flex-col group/block">
+              <div className="flex justify-between items-center mb-4 px-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-apple-gray font-bold">{blockIndex + 1}.</span>
+                  <input 
+                    type="text"
+                    value={col.title}
+                    onChange={(e) => updateBlockTitle(col.id, e.target.value)}
+                    className="font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
+                    placeholder="Nome do Bloco"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <span className="bg-black/10 text-xs font-bold px-2 py-1 rounded-full">{columnSlides.length}</span>
+                  <button 
+                    onClick={() => deleteBlock(col.id)}
+                    className="opacity-0 group-hover/block:opacity-100 p-1.5 text-apple-gray hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    title="Excluir Bloco Inteiro"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 p-2 min-h-[220px] rounded-xl transition-colors items-stretch">
+                <ReactSortable
+                  list={columnSlides}
+                  setList={(newState) => setLocalColumns(prev => ({ ...prev, [col.id]: newState }))}
+                  group="slides"
+                  animation={200}
+                  ghostClass="opacity-50"
+                  handle=".drag-handle"
+                  className="flex flex-wrap gap-4"
+                >
+                  {columnSlides.map((slide) => {
+                    const globalIndex = flatSlidesList.findIndex(s => s.id === slide.id);
+                    const isAiTitle = slide.type && slide.type !== 'Novo Slide' && slide.type !== 'Slide';
+                    
+                    return (
+                      <div
+                        key={slide.id}
+                        className="w-[550px] shrink-0 bg-white rounded-xl shadow-sm border border-black/5 flex flex-col overflow-visible transition-all hover:shadow-md cursor-default"
+                      >
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-black/5 bg-gray-50/50 group">
+                          <div className="drag-handle p-1.5 cursor-grab active:cursor-grabbing text-apple-gray hover:text-black hover:bg-black/5 rounded-md">
+                            <GripHorizontal size={14} />
+                          </div>
+                          
+                          <input
+                            type="text"
+                            placeholder=""
+                            value={slide.title || ''}
+                            onChange={(e) => updateSlideTitle(slide.id, e.target.value, col.id)}
+                            className="text-[11px] font-bold uppercase tracking-wider text-apple-gray bg-transparent px-2 py-1 rounded focus:outline-none focus:bg-white focus:shadow-sm text-center w-32"
+                          />
+
+                          <div className="flex gap-1 relative group/menu">
+                            <button 
+                              className="p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md"
+                              title="Opções"
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+                            {/* Dropdown Menu */}
+                            <div className="absolute right-0 top-full mt-1 bg-white shadow-lg border border-black/10 rounded-lg p-1 opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible z-[100] flex flex-col min-w-[140px]">
+                              <button 
+                                onClick={() => insertSlideAfter(slide.id, col.id)}
+                                className="text-left px-3 py-2 text-xs hover:bg-black/5 rounded-md flex items-center gap-2"
+                              >
+                                <Plus size={14} /> Inserir depois
+                              </button>
+                              <button 
+                                onClick={() => deleteSlide(slide.id, col.id)}
+                                className="text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-md flex items-center gap-2"
+                              >
+                                <Trash2 size={14} /> Excluir
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex p-3 gap-3 h-[340px]">
+                          {/* Lado Esquerdo: Imagem */}
+                          <div className="w-[200px] shrink-0 relative flex flex-col">
+                            {slide.imageUrl ? (
+                              <div className="relative rounded-lg overflow-hidden border border-black/10 bg-black/5 h-full group/img">
+                                <img src={slide.imageUrl} alt="Imagem" className="w-full h-full object-cover" />
+                                <div className="absolute bottom-2 left-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                  <button 
+                                    className="bg-white/90 p-1.5 rounded shadow-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors" 
+                                    onClick={() => updateSlideImage(slide.id, '', col.id)}
+                                    title="Remover imagem"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="relative rounded-lg border-2 border-dashed border-black/10 bg-black/5 h-full flex flex-col items-center justify-center text-apple-gray group/upload transition-colors hover:border-black/30">
+                                <label className="flex flex-col items-center justify-center cursor-pointer hover:text-black w-full h-full z-0">
+                                  <Upload size={24} className="mb-2 text-black/40" />
+                                  <span className="text-xs">Upload Imagem</span>
+                                  <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files && e.target.files[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (event) => {
+                                          const img = new Image();
+                                          img.onload = () => {
+                                            // Redimensionar e comprimir a imagem para economizar espaço
+                                            const canvas = document.createElement('canvas');
+                                            const MAX_WIDTH = 600;
+                                            const MAX_HEIGHT = 800;
+                                            let width = img.width;
+                                            let height = img.height;
+
+                                            if (width > height) {
+                                              if (width > MAX_WIDTH) {
+                                                height *= MAX_WIDTH / width;
+                                                width = MAX_WIDTH;
+                                              }
+                                            } else {
+                                              if (height > MAX_HEIGHT) {
+                                                width *= MAX_HEIGHT / height;
+                                                height = MAX_HEIGHT;
+                                              }
+                                            }
+                                            canvas.width = width;
+                                            canvas.height = height;
+                                            const ctx = canvas.getContext('2d');
+                                            ctx.drawImage(img, 0, 0, width, height);
+                                            
+                                            // Converte para JPEG (qualidade 0.6 para ficar leve ~50kb)
+                                            const base64Url = canvas.toDataURL('image/jpeg', 0.6);
+                                            updateSlideImage(slide.id, base64Url, col.id);
+                                          };
+                                          img.src = event.target.result;
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    const url = window.prompt("Cole a URL da imagem:");
+                                    if (url && url.trim()) updateSlideImage(slide.id, url.trim(), col.id);
+                                  }}
+                                  className="absolute bottom-3 left-3 p-1.5 bg-white shadow-sm rounded-md border border-black/5 opacity-0 group-hover/upload:opacity-100 transition-opacity text-apple-gray hover:text-black z-10"
+                                  title="Colar Link (URL) da imagem"
+                                >
+                                  <LinkIcon size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Lado Direito: Texto */}
+                          <div className="flex-1 flex flex-col border border-black/10 rounded-lg relative bg-white group/text">
+                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/text:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => {
+                                  let contentHtml = slide.content || '';
+                                  // Substituir tags de quebra de linha por \n antes de pegar o texto puro
+                                  contentHtml = contentHtml.replace(/<br\s*\/?>/gi, '\n');
+                                  contentHtml = contentHtml.replace(/<\/p>/gi, '\n');
+                                  contentHtml = contentHtml.replace(/<\/div>/gi, '\n');
+                                  
+                                  const tempDiv = document.createElement('div');
+                                  tempDiv.innerHTML = contentHtml;
+                                  let text = tempDiv.textContent || tempDiv.innerText || '';
+                                  // Limpar múltiplas quebras seguidas excessivas
+                                  text = text.replace(/\n{3,}/g, '\n\n').trim();
+                                  
+                                  navigator.clipboard.writeText(text);
+                                  
+                                  // Efeito visual rápido no botão para confirmar
+                                  const btn = e.currentTarget;
+                                  const originalHtml = btn.innerHTML;
+                                  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                                  btn.classList.add('text-green-600', 'bg-green-50');
+                                  setTimeout(() => {
+                                    btn.innerHTML = originalHtml;
+                                    btn.classList.remove('text-green-600', 'bg-green-50');
+                                  }, 1000);
+                                }}
+                                className="p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md border border-black/5 bg-white shadow-sm transition-all duration-200"
+                                title="Copiar Texto"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </div>
+                            <div className="flex-1 pt-1 overflow-hidden">
+                              <RichTextEditor 
+                                initialContent={slide.content}
+                                onChange={(newContent) => updateSlideContent(slide.id, newContent, col.id)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </ReactSortable>
+                
+                <button 
+                  onClick={() => addBlankSlide(col.id)}
+                  className="w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium h-[386px]"
+                >
+                  <Plus size={24} /> Adicionar postagem
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        <button 
+          onClick={addBlock}
+          className="w-full flex items-center justify-center gap-3 py-6 bg-black/5 hover:bg-black/10 text-apple-dark rounded-3xl font-medium transition-colors border-2 border-dashed border-black/10 hover:border-black/20"
+        >
+          <Plus size={20} /> Adicionar Novo Bloco (Sessão)
+        </button>
+      </div>
+    </div>
+  );
+}
