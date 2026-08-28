@@ -7,7 +7,7 @@ import SlideEditor from './components/SlideEditor';
 import { Settings } from 'lucide-react';
 
 function App() {
-  const { projects, addProject, updateProject, deleteProject, getProject } = useProjects();
+  const { projects, addProject, updateProject, deleteProject, getProject, loading } = useProjects();
   const [currentRoute, setCurrentRoute] = useState('dashboard'); // 'dashboard', 'briefing', 'strategy', 'editor'
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -42,6 +42,7 @@ function App() {
       return (
         <Dashboard 
           projects={projects} 
+          loading={loading}
           onNewFree={handleNewFree}
           onOpen={(id) => navigateTo('editor', id)}
           onDelete={deleteProject}

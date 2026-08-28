@@ -1,7 +1,7 @@
-import { Plus, FileText, Copy, Trash2, ArrowRight, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Plus, FileText, Copy, Trash2, ArrowRight, Loader2, LayoutDashboard } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Dashboard({ projects, onNewFree, onOpen, onDelete, onDuplicate }) {
+export default function Dashboard({ projects, loading, onNewFree, onOpen, onDelete, onDuplicate }) {
   const handleNewFree = () => {
     const nome = window.prompt("Qual o nome do seu Calendário/Projeto?");
     if (nome && nome.trim()) {
@@ -40,7 +40,11 @@ export default function Dashboard({ projects, onNewFree, onOpen, onDelete, onDup
         </button>
       </div>
 
-      {projects.length === 0 ? (
+      {loading && projects.length === 0 ? (
+        <div className="flex items-center justify-center py-20 text-apple-gray">
+          <Loader2 className="animate-spin" size={32} />
+        </div>
+      ) : projects.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
