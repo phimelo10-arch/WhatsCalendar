@@ -29,8 +29,6 @@ function App() {
       name: name,
       updatedAt: new Date().toISOString(),
       isFreeMode: true,
-      minimalBriefing: null,
-      completeBriefing: null,
       slides: [] // O SlideEditor lidará com o estado vazio
     };
     addProject(newProject);
