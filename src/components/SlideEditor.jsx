@@ -446,7 +446,8 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                                             
                                             // Converte para Blob e envia pro Supabase
                                             canvas.toBlob(async (blob) => {
-                                              const fileName = `postagem_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                                              // IMPORTANTE: Salvando dentro da pasta whats-calendar/ para organizar o Supabase compartilhado
+                                              const fileName = `whats-calendar/postagem_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
                                               
                                               try {
                                                 const { data, error } = await supabase.storage
