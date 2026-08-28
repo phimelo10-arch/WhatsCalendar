@@ -131,7 +131,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-sans text-black selection:bg-black selection:text-white">
-      <header className="px-8 py-5 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-50 border-b border-black/5">
+      <header className={`px-8 py-5 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-50 border-b border-black/5 mx-auto ${currentRoute === 'editor' ? 'w-full' : 'max-w-5xl'}`}>
         <h1 className="text-xl font-bold tracking-tight cursor-pointer" onClick={() => navigateTo('dashboard')}>
           Whats Calendar
         </h1>
@@ -151,7 +151,7 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-8 animate-in fade-in duration-500">
+      <main className={`mx-auto px-8 py-8 animate-in fade-in duration-500 ${currentRoute === 'editor' ? 'w-full' : 'max-w-5xl'}`}>
         {renderContent()}
       </main>
 
