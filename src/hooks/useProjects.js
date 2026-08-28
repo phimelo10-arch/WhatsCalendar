@@ -9,8 +9,7 @@ export function useProjects() {
     const fetchProjects = async () => {
       try {
         const { data, error } = await supabase
-          .schema('whats_calendar')
-          .from('projects')
+          .from('whats_calendar_projects')
           .select('*')
           .order('updatedAt', { ascending: false });
           
@@ -33,8 +32,7 @@ export function useProjects() {
   const saveToDb = async (projectToSave) => {
     try {
       const { error } = await supabase
-        .schema('whats_calendar')
-        .from('projects')
+        .from('whats_calendar_projects')
         .upsert(projectToSave);
         
       if (error) console.error("Erro ao salvar projeto no Supabase:", error);
@@ -58,8 +56,7 @@ export function useProjects() {
     
     try {
       const { error } = await supabase
-        .schema('whats_calendar')
-        .from('projects')
+        .from('whats_calendar_projects')
         .delete()
         .eq('id', id);
         
