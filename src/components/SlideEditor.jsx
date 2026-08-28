@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ReactSortable } from 'react-sortablejs';
 import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical } from 'lucide-react';
 import { generatePresentation } from '../services/aiService';
+import { supabase } from '../services/supabase';
 
 const DEFAULT_COLUMNS = [
   { id: 'intro', title: 'Introdução & Atenção' },
@@ -421,10 +422,9 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                                         reader.onload = (event) => {
                                           const img = new Image();
                                           img.onload = () => {
-                                            // Redimensionar e comprimir a imagem para economizar espaço
                                             const canvas = document.createElement('canvas');
-                                            const MAX_WIDTH = 600;
-                                            const MAX_HEIGHT = 800;
+                                            const MAX_WIDTH = 1080;
+                                            const MAX_HEIGHT = 1920;
                                             let width = img.width;
                                             let height = img.height;
 
@@ -444,9 +444,29 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                                             const ctx = canvas.getContext('2d');
                                             ctx.drawImage(img, 0, 0, width, height);
                                             
-                                            // Converte para JPEG (qualidade 0.6 para ficar leve ~50kb)
-                                            const base64Url = canvas.toDataURL('image/jpeg', 0.6);
-                                            updateSlideImage(slide.id, base64Url, col.id);
+                                            // Converte para Blob e envia pro Supabase
+                                            canvas.toBlob(async (blob) => {
+                                              const fileName = `postagem_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                                              
+                                              try {
+                                                const { data, error } = await supabase.storage
+                                                  .from('images')
+                                                  .upload(fileName, blob, { contentType: 'image/jpeg' });
+                                                
+                                                if (error) {
+                                                  alert("Erro no Supabase: Você precisa criar um Storage Bucket chamado 'images' e deixá-lo público. Erro: " + error.message);
+                                                  return;
+                                                }
+                                                
+                                                const { data: { publicUrl } } = supabase.storage
+                                                  .from('images')
+                                                  .getPublicUrl(fileName);
+                                                  
+                                                updateSlideImage(slide.id, publicUrl, col.id);
+                                              } catch (err) {
+                                                alert("Erro inesperado ao subir imagem: " + err.message);
+                                              }
+                                            }, 'image/jpeg', 0.85);
                                           };
                                           img.src = event.target.result;
                                         };
