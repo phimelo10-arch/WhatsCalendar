@@ -68,59 +68,117 @@ function App() {
     }
   };
 
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('wc_auth') === 'true');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (loginEmail === 'phi.melo10@gmail.com' && loginPassword === 'philipinho') {
+      localStorage.setItem('wc_auth', 'true');
+      setIsAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('Email ou senha incorretos.');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFCF8] font-sans p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-lg border border-black/5 w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mb-2">Whats Calendar</h1>
+            <p className="text-apple-gray text-sm">Faça login para acessar o sistema</p>
+          </div>
+          
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input 
+                type="email" 
+                value={loginEmail}
+                onChange={e => setLoginEmail(e.target.value)}
+                className="w-full p-3 bg-gray-50 border border-black/10 rounded-xl focus:outline-none focus:border-black/30"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Senha</label>
+              <input 
+                type="password" 
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                className="w-full p-3 bg-gray-50 border border-black/10 rounded-xl focus:outline-none focus:border-black/30"
+                required
+              />
+            </div>
+            
+            {loginError && <p className="text-red-500 text-sm">{loginError}</p>}
+            
+            <button 
+              type="submit"
+              className="w-full py-3 mt-4 bg-black text-white rounded-xl font-medium hover:bg-black/80 transition-colors"
+            >
+              Entrar
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen p-6 md:p-12">
-      <header className={`flex justify-between items-center mb-8 ${currentRoute === 'editor' ? 'w-full' : 'max-w-5xl mx-auto'}`}>
-        <h1 
-          className="text-2xl font-bold tracking-tight cursor-pointer" 
-          onClick={() => navigateTo('dashboard')}
-        >
+    <div className="min-h-screen bg-[#FDFCF8] font-sans text-black selection:bg-black selection:text-white">
+      <header className="px-8 py-5 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-50 border-b border-black/5">
+        <h1 className="text-xl font-bold tracking-tight cursor-pointer" onClick={() => navigateTo('dashboard')}>
           Whats Calendar
         </h1>
-        <button 
-          onClick={() => setShowSettings(true)}
-          className="p-2 text-apple-gray hover:text-apple-dark transition-colors rounded-full hover:bg-black/5"
-        >
-          <Settings size={20} />
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => {
+              localStorage.removeItem('wc_auth');
+              setIsAuthenticated(false);
+            }}
+            className="text-xs font-medium text-apple-gray hover:text-black underline underline-offset-2 mr-4"
+          >
+            Sair
+          </button>
+          <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-apple-gray hover:text-black">
+            <Settings size={20} />
+          </button>
+        </div>
       </header>
 
-      <main className={currentRoute === 'editor' ? "w-full" : "max-w-5xl mx-auto"}>
+      <main className="max-w-7xl mx-auto px-8 py-8 animate-in fade-in duration-500">
         {renderContent()}
       </main>
 
-      {/* Settings Modal */}
+      {/* MODAL CONFIGURAÇÕES */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center p-4 backdrop-blur-sm z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl border border-black/5">
-            <h2 className="text-xl font-semibold mb-4">Configurações</h2>
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-black/5">
+            <h2 className="text-xl font-bold mb-4">Configurações</h2>
             <div className="mb-6">
-              <label className="block text-sm font-medium text-apple-gray mb-2">
-                Chave da API do Google Gemini
-              </label>
+              <label className="block text-sm font-medium mb-2">Chave da API do Gemini</label>
               <input 
-                type="password"
+                type="password" 
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className="w-full p-3 rounded-xl border border-black/10 focus:outline-none focus:ring-2 focus:ring-black/5 transition-shadow"
                 placeholder="AIzaSy..."
+                className="w-full px-4 py-3 bg-gray-50 border border-black/10 rounded-xl text-sm focus:outline-none focus:border-black/30 transition-colors"
               />
-              <p className="text-xs text-apple-gray mt-2">
-                Salva apenas localmente no seu navegador.
+              <p className="text-[11px] text-apple-gray mt-2 leading-relaxed">
+                Esta chave fica salva apenas no seu navegador. Necessária para usar os recursos de Inteligência Artificial.
               </p>
             </div>
             <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setShowSettings(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-black/5 transition-colors"
-              >
+              <button onClick={() => setShowSettings(false)} className="px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-black/5">
                 Cancelar
               </button>
-              <button 
-                onClick={handleSaveApiKey}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-black text-white hover:bg-black/80 transition-colors"
-              >
-                Salvar
+              <button onClick={handleSaveApiKey} className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-medium hover:bg-black/80 shadow-md">
+                Salvar Configurações
               </button>
             </div>
           </div>
