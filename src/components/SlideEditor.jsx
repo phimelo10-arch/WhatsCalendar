@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save } from 'lucide-react';
 import { generatePresentation } from '../services/aiService';
 import { supabase } from '../services/supabase';
 
@@ -55,6 +55,8 @@ function RichTextEditor({ initialContent, onChange }) {
 
 export default function SlideEditor({ project, updateProject, onBack }) {
   const [copied, setCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -300,6 +302,35 @@ export default function SlideEditor({ project, updateProject, onBack }) {
             <span className="ml-2 font-semibold">Tamanhos:</span>
             <span>Ctrl+1, Ctrl+2, Ctrl+0.</span>
           </div>
+          
+          <button 
+            onClick={() => {
+              // Como o auto-save já ocorre na digitação (blur), 
+              // forçamos uma re-salva chamando o updateProject com o projeto atual
+              setIsSaving(true);
+              updateProject(project);
+              setTimeout(() => {
+                setIsSaving(false);
+                setSaved(true);
+                setTimeout(() => setSaved(false), 2000);
+              }, 500); // pequeno delay para dar sensação de salvamento
+            }}
+            disabled={isSaving}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              saved 
+                ? 'bg-green-500 text-white hover:bg-green-600' 
+                : 'bg-black text-white hover:bg-black/80'
+            }`}
+          >
+            {isSaving ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : saved ? (
+              <Check size={16} />
+            ) : (
+              <Save size={16} />
+            )}
+            {isSaving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar Projeto'}
+          </button>
         </div>
       </div>
 
