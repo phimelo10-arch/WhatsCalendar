@@ -1,29 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
   <defs>
-    <linearGradient id="premiumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#18181B" />
-      <stop offset="100%" stop-color="#27272A" />
+    <linearGradient id="gradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" /> <!-- Verde Esmeralda (Whats) -->
+      <stop offset="100%" stop-color="#0EA5E9" /> <!-- Azul/Ciano (Tecnologia/Premium) -->
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10B981" />
-      <stop offset="100%" stop-color="#059669" />
-    </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3" />
-    </filter>
   </defs>
-  
-  <!-- Fundo do Calendário -->
-  <rect x="6" y="10" width="36" height="32" rx="8" fill="url(#premiumGrad)" filter="url(#shadow)" />
-  
-  <!-- Linha divisória do topo do calendário -->
-  <path d="M6 22H42" stroke="white" stroke-width="2" stroke-opacity="0.1" />
-  
-  <!-- Furos do calendário (Argolas) -->
-  <rect x="14" y="5" width="4" height="10" rx="2" fill="url(#accentGrad)" />
-  <rect x="30" y="5" width="4" height="10" rx="2" fill="url(#accentGrad)" />
-  
-  <!-- Bloquinho de postagem (Representando o Whats) -->
-  <rect x="14" y="28" width="10" height="8" rx="2" fill="white" fill-opacity="0.9" />
-  <rect x="28" y="28" width="6" height="4" rx="2" fill="white" fill-opacity="0.4" />
+
+  <!-- Ícone desenhado apenas em linhas (vazado), sem preenchimento sólido -->
+  <g stroke="url(#gradMain)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Corpo do calendário -->
+    <rect x="8" y="12" width="32" height="28" rx="8" />
+    <!-- Argolas -->
+    <path d="M16 5v10M32 5v10" />
+    <!-- Linha divisória -->
+    <path d="M8 23h32" />
+    <!-- Postagem (linha interna) -->
+    <path d="M18 32h12" />
+  </g>
 </svg>
