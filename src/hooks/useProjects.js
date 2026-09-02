@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabase';
 
 export function useProjects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -29,16 +31,22 @@ export function useProjects() {
     fetchProjects();
   }, []);
 
-  const saveToDb = async (projectToSave) => {
-    try {
-      const { error } = await supabase
-        .from('whats_calendar_projects')
-        .upsert(projectToSave);
-        
-      if (error) console.error("Erro ao salvar projeto no Supabase:", error);
-    } catch (err) {
-      console.error("Erro inesperado ao salvar:", err);
+  const saveToDb = (projectToSave) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from('whats_calendar_projects')
+          .upsert(projectToSave);
+          
+        if (error) console.error("Erro ao salvar projeto no Supabase:", error);
+      } catch (err) {
+        console.error("Erro inesperado ao salvar:", err);
+      }
+    }, 1500); // 1.5s de debounce
   };
 
   const addProject = (project) => {
