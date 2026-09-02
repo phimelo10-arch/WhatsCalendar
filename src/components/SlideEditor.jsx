@@ -372,13 +372,13 @@ export default function SlideEditor({ project, updateProject, onBack }) {
           return (
             <div key={col.id} className="w-full bg-black/5 rounded-3xl p-6 flex flex-col group/block">
               <div className="flex justify-between items-center mb-4 px-2">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <span className="text-apple-gray font-bold">{blockIndex + 1}.</span>
                   <input 
                     type="text"
                     value={col.title}
                     onChange={(e) => updateBlockTitle(col.id, e.target.value)}
-                    className="font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
+                    className="flex-1 min-w-[300px] font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
                     placeholder="Nome do Bloco"
                   />
                 </div>
@@ -452,7 +452,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                           </div>
                         </div>
                         
-                        <div className="flex p-3 gap-3 h-[340px]">
+                        <div className="flex p-3 gap-3 h-[440px]">
                           {/* Lado Esquerdo: Imagem */}
                           <div className="w-[200px] shrink-0 relative flex flex-col">
                             {slide.imageUrl ? (
@@ -608,7 +608,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                 
                 <button 
                   onClick={() => addBlankSlide(col.id)}
-                  className="w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium h-[386px]"
+                  className="w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium h-[486px]"
                 >
                   <Plus size={24} /> Adicionar postagem
                 </button>
