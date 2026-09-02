@@ -59,6 +59,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [expandedImage, setExpandedImage] = useState(null);
 
   const columns = project.columns || DEFAULT_COLUMNS;
   const slides = project.slides || [];
@@ -125,6 +126,13 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     }));
   };
 
+  const updateSlidePrompt = (id, newPrompt, colId) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [colId]: prev[colId].map(s => s.id === id ? { ...s, prompt: newPrompt } : s)
+    }));
+  };
+
   const updateSlideImage = (id, newImageUrl, colId) => {
     setLocalColumns(prev => ({
       ...prev,
@@ -137,6 +145,29 @@ export default function SlideEditor({ project, updateProject, onBack }) {
       ...prev,
       [colId]: prev[colId].map(s => s.id === id ? { ...s, title: newTitle } : s)
     }));
+  };
+
+  const handleCopyText = (e, htmlContent) => {
+    let contentHtml = htmlContent || '';
+    contentHtml = contentHtml.replace(/<br\s*\/?>/gi, '\n');
+    contentHtml = contentHtml.replace(/<\/p>/gi, '\n');
+    contentHtml = contentHtml.replace(/<\/div>/gi, '\n');
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = contentHtml;
+    let text = tempDiv.textContent || tempDiv.innerText || '';
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    
+    navigator.clipboard.writeText(text);
+    
+    const btn = e.currentTarget;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    btn.classList.add('text-green-600', 'bg-green-50', 'border-green-200');
+    setTimeout(() => {
+      btn.innerHTML = originalHtml;
+      btn.classList.remove('text-green-600', 'bg-green-50', 'border-green-200');
+    }, 1000);
   };
 
   const addBlankSlide = (columnId) => {
@@ -426,7 +457,12 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                           <div className="w-[200px] shrink-0 relative flex flex-col">
                             {slide.imageUrl ? (
                               <div className="relative rounded-lg overflow-hidden border border-black/10 bg-black/5 h-full group/img">
-                                <img src={slide.imageUrl} alt="Imagem" className="w-full h-full object-cover" />
+                                <img 
+                                  src={slide.imageUrl} 
+                                  alt="Imagem" 
+                                  className="w-full h-full object-cover cursor-zoom-in" 
+                                  onClick={() => setExpandedImage(slide.imageUrl)}
+                                />
                                 <div className="absolute bottom-2 left-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
                                   <button 
                                     className="bg-white/90 p-1.5 rounded shadow-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors" 
@@ -522,46 +558,46 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                             )}
                           </div>
 
-                          {/* Lado Direito: Texto */}
-                          <div className="flex-1 flex flex-col border border-black/10 rounded-lg relative bg-white group/text">
-                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/text:opacity-100 transition-opacity">
-                              <button 
-                                onClick={() => {
-                                  let contentHtml = slide.content || '';
-                                  // Substituir tags de quebra de linha por \n antes de pegar o texto puro
-                                  contentHtml = contentHtml.replace(/<br\s*\/?>/gi, '\n');
-                                  contentHtml = contentHtml.replace(/<\/p>/gi, '\n');
-                                  contentHtml = contentHtml.replace(/<\/div>/gi, '\n');
-                                  
-                                  const tempDiv = document.createElement('div');
-                                  tempDiv.innerHTML = contentHtml;
-                                  let text = tempDiv.textContent || tempDiv.innerText || '';
-                                  // Limpar múltiplas quebras seguidas excessivas
-                                  text = text.replace(/\n{3,}/g, '\n\n').trim();
-                                  
-                                  navigator.clipboard.writeText(text);
-                                  
-                                  // Efeito visual rápido no botão para confirmar
-                                  const btn = e.currentTarget;
-                                  const originalHtml = btn.innerHTML;
-                                  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                                  btn.classList.add('text-green-600', 'bg-green-50');
-                                  setTimeout(() => {
-                                    btn.innerHTML = originalHtml;
-                                    btn.classList.remove('text-green-600', 'bg-green-50');
-                                  }, 1000);
-                                }}
-                                className="p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md border border-black/5 bg-white shadow-sm transition-all duration-200"
-                                title="Copiar Texto"
-                              >
-                                <Copy size={14} />
-                              </button>
+                          {/* Lado Direito: Texto e Prompt */}
+                          <div className="flex-1 flex flex-col gap-3">
+                            {/* Bloco 1: Texto */}
+                            <div className="flex-1 flex flex-col border border-black/10 rounded-lg relative bg-white group/text">
+                              <div className="px-3 pt-2 pb-1 text-[10px] uppercase font-bold text-apple-gray/70 tracking-wider">Texto</div>
+                              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/text:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={(e) => handleCopyText(e, slide.content)}
+                                  className="p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md border border-black/5 bg-white shadow-sm transition-all duration-200"
+                                  title="Copiar Texto"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              </div>
+                              <div className="flex-1 overflow-hidden">
+                                <RichTextEditor 
+                                  initialContent={slide.content}
+                                  onChange={(newContent) => updateSlideContent(slide.id, newContent, col.id)}
+                                />
+                              </div>
                             </div>
-                            <div className="flex-1 pt-1 overflow-hidden">
-                              <RichTextEditor 
-                                initialContent={slide.content}
-                                onChange={(newContent) => updateSlideContent(slide.id, newContent, col.id)}
-                              />
+
+                            {/* Bloco 2: Prompt */}
+                            <div className="flex-1 flex flex-col border border-black/10 rounded-lg relative bg-white group/prompt">
+                              <div className="px-3 pt-2 pb-1 text-[10px] uppercase font-bold text-apple-gray/70 tracking-wider">Prompt da Imagem</div>
+                              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/prompt:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={(e) => handleCopyText(e, slide.prompt)}
+                                  className="p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md border border-black/5 bg-white shadow-sm transition-all duration-200"
+                                  title="Copiar Prompt"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              </div>
+                              <div className="flex-1 overflow-hidden">
+                                <RichTextEditor 
+                                  initialContent={slide.prompt}
+                                  onChange={(newContent) => updateSlidePrompt(slide.id, newContent, col.id)}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -588,6 +624,21 @@ export default function SlideEditor({ project, updateProject, onBack }) {
           <Plus size={20} /> Adicionar Novo Bloco (Sessão)
         </button>
       </div>
+
+      {/* Lightbox para imagem expandida */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setExpandedImage(null)}
+        >
+          <img 
+            src={expandedImage} 
+            className="max-w-full max-h-full rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200" 
+            alt="Expanded view" 
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
