@@ -170,6 +170,50 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     }, 1000);
   };
 
+  const handleCopyImage = async (e, imageUrl) => {
+    e.stopPropagation(); // Evita abrir o lightbox
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.src = URL.createObjectURL(blob);
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      canvas.toBlob(async (pngBlob) => {
+        if (!pngBlob) throw new Error("Falha ao converter para PNG");
+        
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': pngBlob })
+        ]);
+        
+        const btn = e.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        btn.classList.add('text-green-600', 'bg-green-50', 'border-green-200');
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          btn.classList.remove('text-green-600', 'bg-green-50', 'border-green-200');
+        }, 1000);
+      }, 'image/png');
+      
+    } catch (err) {
+      console.error("Erro ao copiar imagem:", err);
+      alert("Não foi possível copiar a imagem automaticamente. Pode ser um bloqueio de segurança do link (CORS).");
+    }
+  };
+
   const addBlankSlide = (columnId) => {
     const newSlide = {
       id: `slide_${Date.now()}`,
@@ -463,10 +507,22 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                                   className="w-full h-full object-cover cursor-zoom-in" 
                                   onClick={() => setExpandedImage(slide.imageUrl)}
                                 />
+                                <div className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                  <button 
+                                    className="p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md border border-black/5 bg-white shadow-sm transition-all duration-200" 
+                                    onClick={(e) => handleCopyImage(e, slide.imageUrl)}
+                                    title="Copiar imagem"
+                                  >
+                                    <Copy size={14} />
+                                  </button>
+                                </div>
                                 <div className="absolute bottom-2 left-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
                                   <button 
                                     className="bg-white/90 p-1.5 rounded shadow-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors" 
-                                    onClick={() => updateSlideImage(slide.id, '', col.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSlideImage(slide.id, '', col.id);
+                                    }}
                                     title="Remover imagem"
                                   >
                                     <Trash2 size={16} />
@@ -628,15 +684,25 @@ export default function SlideEditor({ project, updateProject, onBack }) {
       {/* Lightbox para imagem expandida */}
       {expandedImage && (
         <div 
-          className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 cursor-zoom-out animate-in fade-in duration-200"
+          className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 cursor-zoom-out animate-in fade-in duration-200 group/lightbox"
           onClick={() => setExpandedImage(null)}
         >
-          <img 
-            src={expandedImage} 
-            className="max-w-full max-h-full rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200" 
-            alt="Expanded view" 
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="relative max-w-full max-h-full">
+            <img 
+              src={expandedImage} 
+              className="max-w-full max-h-full rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 cursor-default" 
+              alt="Expanded view" 
+              onClick={(e) => e.stopPropagation()}
+            />
+            {/* Copy Button Lightbox */}
+            <button 
+              onClick={(e) => handleCopyImage(e, expandedImage)}
+              className="absolute top-4 right-4 p-3 bg-white/90 text-apple-gray hover:text-black hover:bg-white rounded-xl border border-black/10 shadow-lg transition-all duration-200 flex items-center gap-2 font-medium backdrop-blur-md"
+              title="Copiar Imagem"
+            >
+              <Copy size={18} /> <span className="hidden md:inline">Copiar Imagem</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
