@@ -482,7 +482,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                 </div>
               </div>
 
-              <div className="flex overflow-x-auto pb-4 gap-4 p-2 min-h-[220px] rounded-xl transition-colors items-stretch">
+              <div className="flex overflow-x-auto scrollbar-hide pb-4 gap-4 p-2 min-h-[220px] rounded-xl transition-colors items-stretch">
                 <ReactSortable
                   list={columnSlides}
                   setList={(newState) => setLocalColumns(prev => ({ ...prev, [col.id]: newState }))}
