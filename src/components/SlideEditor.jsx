@@ -93,6 +93,13 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     }));
   };
 
+  const updateSlideGptLink = (id, newLink, colId) => {
+    setLocalColumns(prev => ({
+      ...prev,
+      [colId]: prev[colId].map(s => s.id === id ? { ...s, gptLink: newLink } : s)
+    }));
+  };
+
   const updateSlideImage = (id, newImageUrl, colId) => {
     setLocalColumns(prev => ({
       ...prev,
@@ -424,6 +431,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                         updateSlideImage={updateSlideImage}
                         updateSlideContent={updateSlideContent}
                         updateSlidePrompt={updateSlidePrompt}
+                        updateSlideGptLink={updateSlideGptLink}
                         handleCopyText={handleCopyText}
                         handleCopyImage={handleCopyImage}
                         setExpandedImage={setExpandedImage}
@@ -434,7 +442,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                 
                 <button 
                   onClick={() => addBlankSlide(col.id)}
-                  className="w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium h-[486px]"
+                  className="w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium h-[546px]"
                 >
                   <Plus size={24} /> Adicionar postagem
                 </button>
