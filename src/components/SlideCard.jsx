@@ -1,4 +1,4 @@
-import { GripHorizontal, MoreVertical, Plus, Trash2, Upload, Link as LinkIcon, Copy, ArrowUpRight, Edit2 } from 'lucide-react';
+import { GripHorizontal, MoreVertical, Plus, Trash2, Upload, Link as LinkIcon, Copy, ArrowUpRight, Edit2, Calendar } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
 
 export default function SlideCard({
@@ -18,17 +18,32 @@ export default function SlideCard({
   return (
     <div className="w-[550px] shrink-0 bg-white rounded-xl shadow-sm border border-black/5 flex flex-col overflow-visible transition-all hover:shadow-md cursor-default">
       <div className="flex items-center justify-between px-3 py-2 border-b border-black/5 bg-gray-50/50 group">
-        <div className="drag-handle p-1.5 cursor-grab active:cursor-grabbing text-apple-gray hover:text-black hover:bg-black/5 rounded-md">
+        <div className="drag-handle p-1.5 cursor-grab active:cursor-grabbing text-apple-gray hover:text-black hover:bg-black/5 rounded-md shrink-0">
           <GripHorizontal size={14} />
         </div>
         
-        <input
-          type="text"
-          placeholder=""
-          value={slide.title || ''}
-          onChange={(e) => updateSlideTitle(slide.id, e.target.value, colId)}
-          className="text-[11px] font-bold uppercase tracking-wider text-apple-gray bg-transparent px-2 py-1 rounded focus:outline-none focus:bg-white focus:shadow-sm text-center w-32"
-        />
+        <div className="flex items-center gap-1 justify-center flex-1">
+          <input
+            type="text"
+            placeholder=""
+            value={slide.title || ''}
+            onChange={(e) => updateSlideTitle(slide.id, e.target.value, colId)}
+            className="text-[11px] font-bold uppercase tracking-wider text-apple-gray bg-transparent px-2 py-1 rounded focus:outline-none focus:bg-white focus:shadow-sm text-center w-32"
+          />
+          <button 
+            onClick={() => {
+              const days = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+              const today = new Date();
+              const dayName = days[today.getDay()];
+              const dateStr = String(today.getDate()).padStart(2, '0') + '/' + String(today.getMonth() + 1).padStart(2, '0');
+              updateSlideTitle(slide.id, `${dayName} - ${dateStr}`, colId);
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 text-apple-gray hover:text-black hover:bg-black/5 rounded-md transition-all shrink-0"
+            title="Aplicar Data de Hoje"
+          >
+            <Calendar size={12} />
+          </button>
+        </div>
 
         <div className="flex gap-1 relative group/menu">
           <button 

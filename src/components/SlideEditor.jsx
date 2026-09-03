@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save, Calendar, Undo2 } from 'lucide-react';
 import { generatePresentation } from '../services/aiService';
 import { supabase } from '../services/supabase';
 
@@ -32,6 +32,40 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     });
     return state;
   });
+
+  const [canUndo, setCanUndo] = useState(false);
+  const pastLocalColumns = useRef([]);
+
+  const pushHistory = (state) => {
+    pastLocalColumns.current.push(JSON.stringify(state));
+    setCanUndo(true);
+  };
+
+  const handleUndo = () => {
+    if (pastLocalColumns.current.length === 0) return;
+    const previousStateStr = pastLocalColumns.current.pop();
+    setCanUndo(pastLocalColumns.current.length > 0);
+    setLocalColumns(JSON.parse(previousStateStr));
+  };
+
+  const setLocalColumnsWithHistory = (updater) => {
+    setLocalColumns(prev => {
+      pushHistory(prev);
+      return typeof updater === 'function' ? updater(prev) : updater;
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const flatSlides = [];
@@ -81,35 +115,35 @@ export default function SlideEditor({ project, updateProject, onBack }) {
   };
 
   const updateSlideContent = (id, newContent, colId) => {
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [colId]: prev[colId].map(s => s.id === id ? { ...s, content: newContent } : s)
     }));
   };
 
   const updateSlidePrompt = (id, newPrompt, colId) => {
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [colId]: prev[colId].map(s => s.id === id ? { ...s, prompt: newPrompt } : s)
     }));
   };
 
   const updateSlideGptLink = (id, newLink, colId) => {
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [colId]: prev[colId].map(s => s.id === id ? { ...s, gptLink: newLink } : s)
     }));
   };
 
   const updateSlideImage = (id, newImageUrl, colId) => {
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [colId]: prev[colId].map(s => s.id === id ? { ...s, imageUrl: newImageUrl } : s)
     }));
   };
 
   const updateSlideTitle = (id, newTitle, colId) => {
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [colId]: prev[colId].map(s => s.id === id ? { ...s, title: newTitle } : s)
     }));
@@ -190,14 +224,14 @@ export default function SlideEditor({ project, updateProject, onBack }) {
       title: '',
       content: ''
     };
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [columnId]: [...(prev[columnId] || []), newSlide]
     }));
   };
 
   const deleteSlide = (id, colId) => {
-    setLocalColumns(prev => ({
+    setLocalColumnsWithHistory(prev => ({
       ...prev,
       [colId]: prev[colId].filter(s => s.id !== id)
     }));
@@ -211,7 +245,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
       title: '',
       content: ''
     };
-    setLocalColumns(prev => {
+    setLocalColumnsWithHistory(prev => {
       const colSlides = [...(prev[colId] || [])];
       const index = colSlides.findIndex(s => s.id === id);
       colSlides.splice(index + 1, 0, newSlide);
@@ -227,7 +261,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     const newColId = `col_${Date.now()}`;
     const newCol = { id: newColId, title: 'Novo Bloco' };
     
-    setLocalColumns(prev => ({ ...prev, [newColId]: [] }));
+    setLocalColumnsWithHistory(prev => ({ ...prev, [newColId]: [] }));
     
     updateProject({
       ...project,
@@ -412,6 +446,16 @@ export default function SlideEditor({ project, updateProject, onBack }) {
             Imgur
           </a>
 
+          {canUndo && (
+            <button
+              onClick={handleUndo}
+              className="flex items-center gap-2 px-3 py-1.5 bg-black/5 hover:bg-black/10 rounded-lg text-sm font-medium transition-colors text-apple-gray hover:text-black"
+              title="Desfazer (Ctrl+Z)"
+            >
+              <Undo2 size={14} />
+            </button>
+          )}
+
           <button 
             onClick={() => {
               // Como o auto-save já ocorre na digitação (blur), 
@@ -484,23 +528,9 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                     type="text"
                     value={col.title}
                     onChange={(e) => updateBlockTitle(col.id, e.target.value)}
-                    className="flex-none min-w-[200px] max-w-[400px] font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
+                    className="flex-1 min-w-[300px] font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
                     placeholder="Nome do Bloco"
                   />
-
-                  <button 
-                    onClick={() => {
-                      const days = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
-                      const today = new Date();
-                      const dayName = days[today.getDay()];
-                      const dateStr = String(today.getDate()).padStart(2, '0') + '/' + String(today.getMonth() + 1).padStart(2, '0');
-                      updateBlockTitle(col.id, `${dayName} - ${dateStr}`);
-                    }}
-                    className="opacity-0 group-hover/block:opacity-100 p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md transition-all shrink-0"
-                    title="Aplicar Data de Hoje"
-                  >
-                    <Calendar size={14} />
-                  </button>
                 </div>
                 
                 <div className="flex items-center gap-3">
@@ -518,7 +548,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
               <div className="flex overflow-x-auto scrollbar-hide pb-4 gap-4 p-2 min-h-[220px] rounded-xl transition-colors items-stretch">
                 <ReactSortable
                   list={columnSlides}
-                  setList={(newState) => setLocalColumns(prev => ({ ...prev, [col.id]: newState }))}
+                  setList={(newState) => setLocalColumnsWithHistory(prev => ({ ...prev, [col.id]: newState }))}
                   group="slides"
                   animation={200}
                   ghostClass="opacity-50"
