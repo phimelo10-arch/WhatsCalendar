@@ -393,6 +393,16 @@ export default function SlideEditor({ project, updateProject, onBack }) {
             <span>Ctrl+1, Ctrl+2, Ctrl+0.</span>
           </div>
           
+          <a
+            href="https://imgur.com/a/WPuvI4r"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-1.5 bg-black/5 hover:bg-black/10 rounded-lg text-sm font-medium transition-colors text-apple-gray hover:text-black group"
+          >
+            <img src="https://imgur.com/favicon.ico" alt="Imgur" className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" />
+            Imgur
+          </a>
+
           <button 
             onClick={() => {
               // Como o auto-save já ocorre na digitação (blur), 
