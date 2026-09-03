@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save, Calendar, Undo2 } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save, Calendar, Undo2, Minimize2, Maximize2 } from 'lucide-react';
 import { generatePresentation } from '../services/aiService';
 import { supabase } from '../services/supabase';
 
@@ -21,6 +21,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
   const [error, setError] = useState('');
   const [expandedImage, setExpandedImage] = useState(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [isCompactMode, setIsCompactMode] = useState(false);
 
   const columns = project.columns || DEFAULT_COLUMNS;
   const slides = project.slides || [];
@@ -456,6 +457,19 @@ export default function SlideEditor({ project, updateProject, onBack }) {
             </button>
           )}
 
+          <button
+            onClick={() => setIsCompactMode(!isCompactMode)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isCompactMode 
+                ? 'bg-black text-white hover:bg-black/80' 
+                : 'bg-black/5 text-apple-gray hover:bg-black/10 hover:text-black'
+            }`}
+            title={isCompactMode ? "Expandir Cards" : "Recolher Cards"}
+          >
+            {isCompactMode ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+            <span className="hidden md:inline">{isCompactMode ? "Expandir" : "Recolher"}</span>
+          </button>
+
           <button 
             onClick={() => {
               // Como o auto-save já ocorre na digitação (blur), 
@@ -489,12 +503,24 @@ export default function SlideEditor({ project, updateProject, onBack }) {
 
       {/* HORIZONTAL STORYBOARD (ROWS) */}
       <div className="flex-1 flex flex-col gap-8 pb-12 w-full">
-        {columns.map((col, blockIndex) => {
+        <ReactSortable
+          list={columns}
+          setList={(newCols) => {
+            updateProject({ ...project, columns: newCols, updatedAt: new Date().toISOString() });
+          }}
+          animation={200}
+          handle=".block-drag-handle"
+          className="flex flex-col gap-8 w-full"
+        >
+          {columns.map((col, blockIndex) => {
           const columnSlides = localColumns[col.id] || [];
           return (
             <div key={col.id} className="w-full bg-black/5 rounded-3xl p-6 flex flex-col group/block">
               <div className="flex justify-between items-center mb-4 px-2">
                 <div className="flex items-center gap-3 flex-1">
+                  <div className="block-drag-handle p-1 cursor-grab active:cursor-grabbing text-apple-gray hover:text-black hover:bg-black/10 rounded-md transition-colors shrink-0">
+                    <GripHorizontal size={16} />
+                  </div>
                   <span className="text-apple-gray font-bold">{blockIndex + 1}.</span>
                   
                   <div className="relative group/bavatar w-8 h-8 shrink-0">
@@ -574,6 +600,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                         handleCopyText={handleCopyText}
                         handleCopyImage={handleCopyImage}
                         setExpandedImage={setExpandedImage}
+                        isCompactMode={isCompactMode}
                       />
                     );
                   })}
@@ -581,7 +608,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                 
                 <button 
                   onClick={() => addBlankSlide(col.id)}
-                  className="w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium h-[546px]"
+                  className={`w-[220px] shrink-0 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/10 text-apple-gray rounded-xl hover:border-black/20 hover:text-black transition-colors text-sm font-medium ${isCompactMode ? 'h-[250px]' : 'h-[546px]'}`}
                 >
                   <Plus size={24} /> Adicionar postagem
                 </button>
@@ -589,6 +616,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
             </div>
           );
         })}
+        </ReactSortable>
 
         <button 
           onClick={addBlock}

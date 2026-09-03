@@ -13,11 +13,12 @@ export default function SlideCard({
   updateSlideGptLink,
   handleCopyText,
   handleCopyImage,
-  setExpandedImage
+  setExpandedImage,
+  isCompactMode
 }) {
   return (
-    <div className="w-[550px] shrink-0 bg-white rounded-xl shadow-sm border border-black/5 flex flex-col overflow-visible transition-all hover:shadow-md cursor-default">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-black/5 bg-gray-50/50 group">
+    <div className={`w-[550px] shrink-0 bg-white rounded-xl shadow-sm border border-black/5 flex flex-col overflow-hidden transition-all hover:shadow-md cursor-default relative ${isCompactMode ? 'h-[250px]' : ''}`}>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-black/5 bg-gray-50/50 group shrink-0">
         <div className="drag-handle p-1.5 cursor-grab active:cursor-grabbing text-apple-gray hover:text-black hover:bg-black/5 rounded-md shrink-0">
           <GripHorizontal size={14} />
         </div>
@@ -69,7 +70,7 @@ export default function SlideCard({
         </div>
       </div>
       
-      <div className="flex p-3 gap-3 h-[500px]">
+      <div className={`flex p-3 gap-3 transition-all ${isCompactMode ? 'h-[250px]' : 'h-[500px]'}`}>
         {/* Lado Esquerdo: Imagem */}
         <div className="w-[200px] shrink-0 relative flex flex-col">
           {slide.imageUrl ? (
@@ -262,6 +263,10 @@ export default function SlideCard({
           </div>
         </div>
       </div>
+      
+      {isCompactMode && (
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white via-white/80 to-transparent z-10 pointer-events-none" />
+      )}
     </div>
   );
 }
