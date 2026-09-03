@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, Trash2, GripHorizontal, Check, Loader2, Sparkles, Type, Edit2, Upload, Link as LinkIcon, MoreVertical, Save, Calendar } from 'lucide-react';
 import { generatePresentation } from '../services/aiService';
 import { supabase } from '../services/supabase';
 
@@ -20,6 +20,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedImage, setExpandedImage] = useState(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const columns = project.columns || DEFAULT_COLUMNS;
   const slides = project.slides || [];
@@ -385,13 +386,21 @@ export default function SlideEditor({ project, updateProject, onBack }) {
         </div>
         
         <div className="flex gap-4 items-center">
-          <div className="hidden md:flex gap-2 text-xs text-apple-gray bg-black/5 px-3 py-1.5 rounded-lg items-center">
+          <button 
+            onClick={() => setShowShortcuts(!showShortcuts)}
+            className="hidden md:flex gap-2 text-xs text-apple-gray bg-black/5 px-3 py-1.5 rounded-lg items-center hover:bg-black/10 transition-colors cursor-pointer outline-none"
+          >
             <Type size={12} />
-            <span className="font-semibold">Atalhos:</span>
-            <span>Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+S.</span>
-            <span className="ml-2 font-semibold">Tamanhos:</span>
-            <span>Ctrl+1, Ctrl+2, Ctrl+0.</span>
-          </div>
+            <span className="font-semibold">Atalhos</span>
+            {showShortcuts && (
+              <span className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                <span className="text-black/20">|</span>
+                <span>Ctrl+B, I, U, S.</span>
+                <span className="ml-2 font-semibold">Tamanhos:</span>
+                <span>Ctrl+1, 2, 0.</span>
+              </span>
+            )}
+          </button>
           
           <a
             href="https://imgur.com/a/WPuvI4r"
@@ -475,9 +484,23 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                     type="text"
                     value={col.title}
                     onChange={(e) => updateBlockTitle(col.id, e.target.value)}
-                    className="flex-1 min-w-[300px] font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
+                    className="flex-none min-w-[200px] max-w-[400px] font-semibold text-sm uppercase tracking-wider bg-transparent focus:outline-none focus:bg-white focus:px-3 focus:py-1 focus:rounded-lg focus:shadow-sm transition-all"
                     placeholder="Nome do Bloco"
                   />
+
+                  <button 
+                    onClick={() => {
+                      const days = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+                      const today = new Date();
+                      const dayName = days[today.getDay()];
+                      const dateStr = String(today.getDate()).padStart(2, '0') + '/' + String(today.getMonth() + 1).padStart(2, '0');
+                      updateBlockTitle(col.id, `${dayName} - ${dateStr}`);
+                    }}
+                    className="opacity-0 group-hover/block:opacity-100 p-1.5 text-apple-gray hover:text-black hover:bg-black/5 rounded-md transition-all shrink-0"
+                    title="Aplicar Data de Hoje"
+                  >
+                    <Calendar size={14} />
+                  </button>
                 </div>
                 
                 <div className="flex items-center gap-3">
