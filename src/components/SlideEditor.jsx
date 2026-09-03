@@ -262,6 +262,54 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     });
   };
 
+  const updateBlockAvatar = (colId, newAvatarUrl) => {
+    const newColumns = columns.map(c => c.id === colId ? { ...c, avatarUrl: newAvatarUrl } : c);
+    updateProject({
+      ...project,
+      columns: newColumns,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const handleUploadBlockAvatar = (e, colId) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 200;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX) { height *= MAX / width; width = MAX; }
+          } else {
+            if (height > MAX) { width *= MAX / height; height = MAX; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob(async (blob) => {
+            const fileName = `whats-calendar/avatar_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+            const { error } = await supabase.storage.from('images').upload(fileName, blob, { contentType: 'image/jpeg' });
+            if (!error) {
+              const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
+              updateBlockAvatar(colId, publicUrl);
+            }
+          }, 'image/jpeg', 0.85);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const flatSlidesList = [];
   columns.forEach(c => {
     if (localColumns[c.id]) {
@@ -325,7 +373,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
   return (
     <div className="flex flex-col min-h-screen">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6 shrink-0">
+      <div className="sticky top-[72px] z-40 bg-[#FDFCF8]/95 backdrop-blur-md pt-8 pb-4 mb-6 -mt-8 -mx-8 px-8 border-b border-black/5 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="flex items-center gap-2 text-sm font-medium text-apple-gray hover:text-black">
             <ArrowLeft size={16} /> {project.isFreeMode ? 'Dashboard' : 'Estratégia'}
@@ -385,6 +433,34 @@ export default function SlideEditor({ project, updateProject, onBack }) {
               <div className="flex justify-between items-center mb-4 px-2">
                 <div className="flex items-center gap-3 flex-1">
                   <span className="text-apple-gray font-bold">{blockIndex + 1}.</span>
+                  
+                  <div className="relative group/bavatar w-8 h-8 shrink-0">
+                    <label className="w-full h-full rounded-full bg-white border border-black/10 overflow-hidden cursor-pointer flex items-center justify-center hover:border-black/30 transition-colors shadow-sm block">
+                      {col.avatarUrl ? (
+                        <img src={col.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <Upload size={14} className="text-apple-gray/60" />
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleUploadBlockAvatar(e, col.id)}
+                      />
+                    </label>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const url = window.prompt("Cole o link da imagem:");
+                        if (url && url.trim()) updateBlockAvatar(col.id, url.trim());
+                      }}
+                      className="absolute -bottom-1 -right-1 p-1 bg-white shadow-sm rounded-md border border-black/5 opacity-0 group-hover/bavatar:opacity-100 transition-opacity text-apple-gray hover:text-black z-10"
+                      title="Colar Link da imagem"
+                    >
+                      <LinkIcon size={10} />
+                    </button>
+                  </div>
+
                   <input 
                     type="text"
                     value={col.title}
