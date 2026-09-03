@@ -139,6 +139,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
 
   const handleCopyImage = async (e, imageUrl) => {
     e.stopPropagation(); // Evita abrir o lightbox
+    const btn = e.currentTarget;
     try {
       const response = await fetch(imageUrl);
       const blob = await response.blob();
@@ -165,7 +166,6 @@ export default function SlideEditor({ project, updateProject, onBack }) {
           new ClipboardItem({ 'image/png': pngBlob })
         ]);
         
-        const btn = e.currentTarget;
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
         btn.classList.add('text-green-600', 'bg-green-50', 'border-green-200');
@@ -406,7 +406,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-4 p-2 min-h-[220px] rounded-xl transition-colors items-stretch">
+              <div className="flex overflow-x-auto pb-4 gap-4 p-2 min-h-[220px] rounded-xl transition-colors items-stretch">
                 <ReactSortable
                   list={columnSlides}
                   setList={(newState) => setLocalColumns(prev => ({ ...prev, [col.id]: newState }))}
@@ -414,7 +414,7 @@ export default function SlideEditor({ project, updateProject, onBack }) {
                   animation={200}
                   ghostClass="opacity-50"
                   handle=".drag-handle"
-                  className="flex flex-wrap gap-4"
+                  className="flex gap-4 shrink-0"
                 >
                   {columnSlides.map((slide) => {
                     const globalIndex = flatSlidesList.findIndex(s => s.id === slide.id);
@@ -465,10 +465,10 @@ export default function SlideEditor({ project, updateProject, onBack }) {
           className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 cursor-zoom-out animate-in fade-in duration-200 group/lightbox"
           onClick={() => setExpandedImage(null)}
         >
-          <div className="relative max-w-full max-h-full">
+          <div className="relative max-w-full max-h-[90vh] flex items-center justify-center">
             <img 
               src={expandedImage} 
-              className="max-w-full max-h-full rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 cursor-default" 
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 cursor-default" 
               alt="Expanded view" 
               onClick={(e) => e.stopPropagation()}
             />
