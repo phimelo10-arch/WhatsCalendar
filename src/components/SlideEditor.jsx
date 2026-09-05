@@ -88,6 +88,40 @@ export default function SlideEditor({ project, updateProject, onBack }) {
     }
   }, [localColumns, project, columns, updateProject, slides]);
 
+  useEffect(() => {
+    if (!expandedImage) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setExpandedImage(null);
+        return;
+      }
+      
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const slidesWithImages = [];
+        columns.forEach(c => {
+          if (localColumns[c.id]) {
+            localColumns[c.id].forEach(s => {
+              if (s.imageUrl) slidesWithImages.push(s);
+            });
+          }
+        });
+
+        const currentIndex = slidesWithImages.findIndex(s => s.id === expandedImage.id);
+        if (currentIndex !== -1) {
+          if (e.key === 'ArrowRight' && currentIndex < slidesWithImages.length - 1) {
+            setExpandedImage(slidesWithImages[currentIndex + 1]);
+          } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+            setExpandedImage(slidesWithImages[currentIndex - 1]);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [expandedImage, localColumns, columns]);
+
   const handleGenerate = async () => {
     const apiKey = localStorage.getItem('gemini_api_key');
     if (!apiKey) {
@@ -634,19 +668,27 @@ export default function SlideEditor({ project, updateProject, onBack }) {
         >
           <div className="relative max-w-full max-h-[90vh] flex items-center justify-center">
             <img 
-              src={expandedImage} 
+              src={expandedImage.imageUrl} 
               className="max-w-[90vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 cursor-default" 
               alt="Expanded view" 
               onClick={(e) => e.stopPropagation()}
             />
             {/* Copy Button Lightbox */}
             <button 
-              onClick={(e) => handleCopyImage(e, expandedImage)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyImage(e, expandedImage.imageUrl);
+              }}
               className="absolute top-4 right-4 p-3 bg-white/90 text-apple-gray hover:text-black hover:bg-white rounded-xl border border-black/10 shadow-lg transition-all duration-200 flex items-center gap-2 font-medium backdrop-blur-md"
               title="Copiar Imagem"
             >
               <Copy size={18} /> <span className="hidden md:inline">Copiar Imagem</span>
             </button>
+            
+            {/* Indicador de Setas (opcional) */}
+            <div className="absolute bottom-4 text-white/50 text-sm bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm pointer-events-none">
+              Use as setas ⬅️ ➡️ para navegar
+            </div>
           </div>
         </div>
       )}

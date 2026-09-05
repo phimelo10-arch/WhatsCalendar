@@ -79,7 +79,7 @@ export default function SlideCard({
                 src={slide.imageUrl} 
                 alt="Imagem" 
                 className="w-full h-full object-cover cursor-zoom-in" 
-                onClick={() => setExpandedImage(slide.imageUrl)}
+                onClick={() => setExpandedImage(slide)}
               />
               <div className="absolute top-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
                 <button 
